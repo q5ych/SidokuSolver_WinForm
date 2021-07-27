@@ -14,6 +14,8 @@ namespace SidokuSolver_WinForm
         private static Sudoku _sudokuInput;
         private static Sudoku _sudokuSolution;
 
+        private bool _isInputChanged;
+
         private Thread _solvingThread;
 
         public Form1()
@@ -22,6 +24,7 @@ namespace SidokuSolver_WinForm
             DataGridViewSudokuMatrixSetup();
 
             _solver = new Solver();
+            _isInputChanged = true;
 
             _solver.OnStatusChanged = OnStatusChanged;
             _solver.OnSolvingDone = OnSolvingDone;
@@ -32,11 +35,12 @@ namespace SidokuSolver_WinForm
         public void OnSolvingDone()
         {
             Console.WriteLine("[main] OnSolvingDone");
-            _sudokuSolution = _solver.GetSolution();
-            PrintSudokuToTable(_sudokuSolution);
+            
             cCancel.Enabled = false;
             bSolve.Enabled = true;
+            _isInputChanged = false;
 
+            ReprintSolution();
         }
         public void OnStatusChanged(Solver.eSolvingStatus stat)
         {
@@ -126,11 +130,17 @@ namespace SidokuSolver_WinForm
             }
 
             // check if already generated
-            if(_solver.Status == Solver.eSolvingStatus.Done)
+            if(_isInputChanged == false)
             {
-                Console.WriteLine("[main] Already Solved.");
-                return;
+                if (_solver.Status == Solver.eSolvingStatus.SolvingSuccess ||
+                _solver.Status == Solver.eSolvingStatus.SolvingFail)
+                {
+                    Console.WriteLine("[main] Already Solved.");
+                    ReprintSolution();
+                    return;
+                }
             }
+            
 
             _sudokuInput = CreateSudokuFromTable();
 
@@ -142,6 +152,25 @@ namespace SidokuSolver_WinForm
 
             cCancel.Enabled = false;
             bSolve.Enabled = true;
+        }
+
+        private void ReprintSolution()
+        {
+            if (_isInputChanged == false)
+            {
+                if (_solver.Status == Solver.eSolvingStatus.SolvingSuccess)
+                {
+                    _sudokuSolution = _solver.GetSolution();
+                    PrintSudokuToTable(_sudokuSolution);
+                    return;
+                }
+
+                if (_solver.Status == Solver.eSolvingStatus.SolvingFail)
+                {
+                    MessageBox.Show("Solving error.", "Your sudoku is not able to solve.", MessageBoxButtons.OK);
+                }
+            }
+            
         }
 
         private void bClearAll_Click(object sender, EventArgs e)
@@ -167,6 +196,11 @@ namespace SidokuSolver_WinForm
         {
             _solver.Abort();
             //_solvingThread.Abort();
+        }
+
+        private void dgvSudokuMatrix_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            _isInputChanged = true;
         }
     }
 }

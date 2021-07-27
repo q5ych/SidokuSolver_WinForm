@@ -21,7 +21,8 @@ namespace SidokuSolver_WinForm
             SudokuNotLoad,
             SudokuLoad,
             InProgress,
-            Done,
+            SolvingSuccess,
+            SolvingFail,
             Canceled
         }
 
@@ -51,6 +52,7 @@ namespace SidokuSolver_WinForm
             if(sudoku == null) throw new NullReferenceException(nameof(sudoku));
             _inputSudoku = (Sudoku)sudoku.Clone();
             _outputSudoku = new Sudoku(_inputSudoku);
+            _stepsHistory.Clear();
 
             ChangeState(eSolvingStatus.SudokuLoad);
         }
@@ -76,6 +78,7 @@ namespace SidokuSolver_WinForm
                     {
                         Step step = new Step(r, c, 1);
                         _stepsHistory.Push(step);
+                        Console.WriteLine("pushing step R: " + step.X + "  C: " + step.Y + "  VAL: " + step.Value);
                         ApplyStep(step);
 
                         return true;
@@ -89,6 +92,9 @@ namespace SidokuSolver_WinForm
 
         private bool StepBackward()
         {
+            //is not able to solve condition:
+            if (_stepsHistory.Count == 0)
+                return false;
 
             var currStep = _stepsHistory.Peek();
 
@@ -122,7 +128,6 @@ namespace SidokuSolver_WinForm
             bool isAbleToStepForward = false;
             bool isAbleToStepBackward = true;
 
-
             ChangeState(eSolvingStatus.InProgress);
 
             isAbleToStepForward = StepForward();
@@ -140,7 +145,13 @@ namespace SidokuSolver_WinForm
                 inc++;
                 currStep = _stepsHistory.Peek();
 
-                if (_inputSudoku.IsValid(currStep.X, currStep.Y))
+                if (currStep.X == 0 && currStep.Y == 4)
+                {
+                    inc++;
+                    inc--;
+                }
+
+                if (_outputSudoku.IsValid(currStep.X, currStep.Y))
                 {
                     isAbleToStepForward = StepForward();
                 }
@@ -149,17 +160,32 @@ namespace SidokuSolver_WinForm
                     isAbleToStepBackward = StepBackward();
                 }
 
+                Console.WriteLine("- inc: + " + inc);
+                //if (inc == 50)
+                //{
+                //    Console.WriteLine("Canceling");
+                //    OnSolvingDone();
+                //    break;
+                //}
+                    
             }
 
-            Console.WriteLine("____________________________________________________________________________________________");
-            Console.WriteLine("__________________                    no:  " + inc + "                      ___________________________");
-            Console.WriteLine();
-            Console.WriteLine(_outputSudoku.ToString());
-            Console.WriteLine("____________________________________________________________________________________________");
-
-            ChangeState(eSolvingStatus.Done);
-            if(OnSolvingDone != null)
+            //loop eskaped because no more backwardsteps => unsolvable
+            if (!isAbleToStepBackward)
+                ChangeState(eSolvingStatus.SolvingFail);
+            else
+                ChangeState(eSolvingStatus.SolvingSuccess);
+            
+            if (OnSolvingDone != null)
                 OnSolvingDone();
+
+            //Console.WriteLine("____________________________________________________________________________________________");
+            //Console.WriteLine("__________________                    no:  " + inc + "                      ___________________________");
+            //Console.WriteLine();
+            //Console.WriteLine(_outputSudoku.ToString());
+            //Console.WriteLine("____________________________________________________________________________________________");
+
+
 
             return;
         }

@@ -45,6 +45,7 @@ namespace SidokuSolver_WinForm
             this.dgvSudokuMatrix.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.dgvSudokuMatrix.Size = new System.Drawing.Size(280, 280);
             this.dgvSudokuMatrix.TabIndex = 0;
+            this.dgvSudokuMatrix.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvSudokuMatrix_CellValueChanged);
             // 
             // bSolve
             // 
