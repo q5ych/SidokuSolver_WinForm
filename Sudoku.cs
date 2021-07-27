@@ -19,7 +19,7 @@ namespace SidokuSolver_WinForm
 
         public Sudoku()
         {
-            //_array = new int[MAX_X, MAX_Y];
+            _array = new int[MAX_X, MAX_Y];
         }
         public Sudoku(Sudoku sudoku)
         {

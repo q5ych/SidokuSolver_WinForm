@@ -25,6 +25,8 @@ namespace SidokuSolver_WinForm
 
             _solver.OnStatusChanged = OnStatusChanged;
             _solver.OnSolvingDone = OnSolvingDone;
+
+            cCancel.Enabled = false;
         }
 
         public void OnSolvingDone()
@@ -32,6 +34,8 @@ namespace SidokuSolver_WinForm
             Console.WriteLine("[main] OnSolvingDone");
             _sudokuSolution = _solver.GetSolution();
             PrintSudokuToTable(_sudokuSolution);
+            cCancel.Enabled = false;
+            bSolve.Enabled = true;
 
         }
         public void OnStatusChanged(Solver.eSolvingStatus stat)
@@ -99,23 +103,34 @@ namespace SidokuSolver_WinForm
 
         public void PrintSudokuToTable(Sudoku sudoku)
         {
+            int element;
             for (int c = 0; c < 9; c++)
                 for (int r = 0; r < 9; r++)
                 {
-                    dgvSudokuMatrix.Rows[r].Cells[c].Value = sudoku._array[r, c].ToString();
+                    element = sudoku._array[r, c];
+                    if(element == -1)
+                        dgvSudokuMatrix.Rows[r].Cells[c].Value = "";
+                    else
+                        dgvSudokuMatrix.Rows[r].Cells[c].Value = element.ToString();
                 }
 
         }
 
         private void bSolve_Click(object sender, EventArgs e)
         {
-
+            // avoid multiple executing
             if(_solver.Status == Solver.eSolvingStatus.InProgress)
             {
                 Console.WriteLine("Generacja zablokowane, bo watek jeszcze raz");
                 return;
             }
 
+            // check if already generated
+            if(_solver.Status == Solver.eSolvingStatus.Done)
+            {
+                Console.WriteLine("[main] Already Solved.");
+                return;
+            }
 
             _sudokuInput = CreateSudokuFromTable();
 
@@ -124,10 +139,9 @@ namespace SidokuSolver_WinForm
 
             _solvingThread = new Thread(new ThreadStart(_solver.Solve));
             _solvingThread.Start();
-            //_sudokuSolution = _solver.GetSolution();
 
-            //Console.WriteLine(_sudokuSolution.ToString());
-            //PrintSudokuToTable(_sudokuSolution);
+            cCancel.Enabled = false;
+            bSolve.Enabled = true;
         }
 
         private void bClearAll_Click(object sender, EventArgs e)
