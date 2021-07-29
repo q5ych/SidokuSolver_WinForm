@@ -82,12 +82,10 @@ namespace SidokuSolver_WinForm
         {
             if (HasColumnGotDuplicates(col))
                 return false;
-
             else
             {
                 if (HasRowGotDuplicates(row))
                     return false;
-
                 else
                 {
                     if (HasChunkGotDuplicates(row, col))
@@ -335,43 +333,5 @@ namespace SidokuSolver_WinForm
 
             return HasRowGotDuplicates_recurency(row, pos + 1);
         }
-
-
-
-
-        //public override string ToString()
-        //{
-        //    var sb = new StringBuilder();
-
-        //    sb.AppendLine("------------------------------------------------------");
-        //    for (int r = 0; r < Sudoku_old.MAX_X; r++)
-        //    {
-        //        for (int c = 0; c < Sudoku_old.MAX_Y; c++)
-        //        {
-        //            sb.Append(" (");
-        //            if (_array[r, c] != BLANK_CELL_VALUE)
-        //                sb.Append(_array[r, c].ToString());
-        //            else
-        //                sb.Append(" ");
-        //            sb.Append(") ");
-        //            sb.Append("|");
-        //        }
-        //        sb.AppendLine();
-        //        sb.AppendLine("------------------------------------------------------");
-        //    }
-
-        //    return sb.ToString();
-        //}
-
-        //public object Clone()
-        //{
-        //    Sudoku_old copy = new Sudoku_old();
-
-        //    for (int r = 0; r < Sudoku_old.MAX_X; r++)
-        //        for (int c = 0; c < Sudoku_old.MAX_Y; c++)
-        //            copy._array[r, c] = _array[r, c];
-
-        //    return (object)copy;
-        //}
     }
 }

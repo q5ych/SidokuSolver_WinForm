@@ -73,7 +73,6 @@ namespace SidokuSolver_WinForm
 
         private void RemoveStepFromCell(Step step)
         {
-            //_outputSudoku._array[step.X, step.Y] = Sudoku_old.BLANK_CELL_VALUE;
             _outputSudoku.SetValue(step.X, step.Y, _outputSudoku.Rules.BlankCellValue);
         }
 
@@ -88,7 +87,7 @@ namespace SidokuSolver_WinForm
                     {
                         Step step = new Step(r, c, 1);
                         _stepsHistory.Push(step);
-                        Console.WriteLine("pushing step R: " + step.X + "  C: " + step.Y + "  VAL: " + step.Value);
+                        //Console.WriteLine("pushing step R: " + step.X + "  C: " + step.Y + "  VAL: " + step.Value);
                         ApplyStep(step);
 
                         return true;

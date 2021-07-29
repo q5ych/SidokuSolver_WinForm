@@ -33,8 +33,8 @@ namespace SidokuSolver_WinForm
             this.bSolve = new System.Windows.Forms.Button();
             this.bClearAll = new System.Windows.Forms.Button();
             this.bClearSolution = new System.Windows.Forms.Button();
-            this.cCancel = new System.Windows.Forms.Button();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.bCancel = new System.Windows.Forms.Button();
+            this.cbGameVariants = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.dgvSudokuMatrix)).BeginInit();
             this.SuspendLayout();
             // 
@@ -78,33 +78,33 @@ namespace SidokuSolver_WinForm
             this.bClearSolution.UseVisualStyleBackColor = true;
             this.bClearSolution.Click += new System.EventHandler(this.bClearSolution_Click);
             // 
-            // cCancel
+            // bCancel
             // 
-            this.cCancel.Location = new System.Drawing.Point(233, 51);
-            this.cCancel.Name = "cCancel";
-            this.cCancel.Size = new System.Drawing.Size(93, 29);
-            this.cCancel.TabIndex = 4;
-            this.cCancel.Text = "Cancel";
-            this.cCancel.UseVisualStyleBackColor = true;
-            this.cCancel.Click += new System.EventHandler(this.cCancel_Click);
+            this.bCancel.Location = new System.Drawing.Point(233, 51);
+            this.bCancel.Name = "bCancel";
+            this.bCancel.Size = new System.Drawing.Size(93, 29);
+            this.bCancel.TabIndex = 4;
+            this.bCancel.Text = "Cancel";
+            this.bCancel.UseVisualStyleBackColor = true;
+            this.bCancel.Click += new System.EventHandler(this.bCancel_Click);
             // 
-            // comboBox1
+            // cbGameVariants
             // 
-            this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(12, 16);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(314, 21);
-            this.comboBox1.TabIndex = 5;
-            this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
+            this.cbGameVariants.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbGameVariants.FormattingEnabled = true;
+            this.cbGameVariants.Location = new System.Drawing.Point(12, 16);
+            this.cbGameVariants.Name = "cbGameVariants";
+            this.cbGameVariants.Size = new System.Drawing.Size(314, 21);
+            this.cbGameVariants.TabIndex = 5;
+            this.cbGameVariants.SelectedIndexChanged += new System.EventHandler(this.cbGameVariants_SelectedIndexChanged);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(517, 554);
-            this.Controls.Add(this.comboBox1);
-            this.Controls.Add(this.cCancel);
+            this.Controls.Add(this.cbGameVariants);
+            this.Controls.Add(this.bCancel);
             this.Controls.Add(this.bClearSolution);
             this.Controls.Add(this.bClearAll);
             this.Controls.Add(this.bSolve);
@@ -122,8 +122,8 @@ namespace SidokuSolver_WinForm
         private System.Windows.Forms.Button bSolve;
         private System.Windows.Forms.Button bClearAll;
         private System.Windows.Forms.Button bClearSolution;
-        private System.Windows.Forms.Button cCancel;
-        private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.Button bCancel;
+        private System.Windows.Forms.ComboBox cbGameVariants;
     }
 }
 

@@ -28,19 +28,19 @@ namespace SidokuSolver_WinForm
             varManager.OnRulesChanged += RulesChangedEvent;
 
             foreach(var variant in varManager.GetAvailableGames())
-            {
-                comboBox1.Items.Add(variant.Description);
-            }
+                cbGameVariants.Items.Add(variant.Description);
+
             _solver = new Solver();
             _solver.OnSolvingDone = OnSolvingDone;
             _solver.OnStatusChanged = OnStatusChanged;
 
-            comboBox1.SelectedIndex = 0;
-            comboBox1_SelectedIndexChanged(null, null);
+            cbGameVariants.SelectedIndex = 0;
+            cbGameVariants_SelectedIndexChanged(null, null);
 
-            cCancel.Enabled = false;
+            bCancel.Enabled = false;
         }
 
+        #region Delegates
         public void OnSolvingDone()
         {
             Console.WriteLine("[main] OnSolvingDone");
@@ -63,13 +63,14 @@ namespace SidokuSolver_WinForm
                 case Solver.eSolvingStatus.SolvingSuccess:
                 case Solver.eSolvingStatus.SolvingFail:
                 case Solver.eSolvingStatus.Canceled:
-                    cCancel.BeginInvoke((Action)delegate ()
+                    bCancel.BeginInvoke((Action)delegate ()
                     {
-                        cCancel.Enabled = false;
+                        bCancel.Enabled = false;
                     });
                     bSolve.BeginInvoke((Action)delegate ()
                     {
                         bSolve.Enabled = true;
+                        bSolve.Text = "Solve Sudoku";
                     });
                     break;
                 default:
@@ -78,9 +79,18 @@ namespace SidokuSolver_WinForm
 
         }
 
+        private void RulesChangedEvent(SudokuFieldRules rules)
+        {
+            PrepareDataGridViewOutput(rules);
+            _solver.Clear();
+        }
+
+        #endregion
+
+        #region DataGridView operations
         private void InitDataGridViewOutput()
         {
-            dgvSudokuMatrix.Rows.Clear(); 
+            dgvSudokuMatrix.Rows.Clear();
             dgvSudokuMatrix.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             dgvSudokuMatrix.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dgvSudokuMatrix.AllowUserToResizeColumns = false;
@@ -114,13 +124,14 @@ namespace SidokuSolver_WinForm
             else
                 smallerDim = componentWidth / fieldRules.MaxCols;
 
-            dgvSudokuMatrix.DefaultCellStyle.Font = new Font(FontFamily.GenericMonospace, (smallerDim*2)/5, FontStyle.Regular);
+            dgvSudokuMatrix.DefaultCellStyle.Font = new Font(FontFamily.GenericMonospace, (smallerDim * 2) / 5, FontStyle.Regular);
 
             //colouring
             for (int c = 0; c < fieldRules.MaxCols; c++)
                 for (int r = 0; r < fieldRules.MaxRows; r++)
                 {
-                    if((c / varManager.CurrentRules.ChunkSizeCols)%2 == 1){
+                    if ((c / varManager.CurrentRules.ChunkSizeCols) % 2 == 1)
+                    {
                         if ((r / varManager.CurrentRules.ChunkSizeRows) % 2 == 1)
                             dgvSudokuMatrix.Rows[r].Cells[c].Style.BackColor = Color.LightSteelBlue;
                         else
@@ -137,16 +148,11 @@ namespace SidokuSolver_WinForm
             //dgvSudokuMatrix.Rows.RemoveAt(dgvSudokuMatrix.Rows.Count - 1);
         }
 
-        private void RulesChangedEvent(SudokuFieldRules rules)
-        {
-            PrepareDataGridViewOutput(rules);
-            _solver.Clear();
-        }
-
         private Sudoku CreateSudokuFromTable(SudokuFieldRules rules)
         {
             SudokuSimpleChunk sudoku = new SudokuSimpleChunk(rules);
             string cellText;
+            int tempVal;
 
             for (int c = 0; c < rules.MaxCols; c++)
                 for (int r = 0; r < rules.MaxRows; r++)
@@ -159,14 +165,18 @@ namespace SidokuSolver_WinForm
                         continue;
                     }
 
-                    if (cellText.Length != 1)
-                        sudoku.SetValue(r, c, -1);
+                    if (Int32.TryParse(cellText, out tempVal))
+                    {
+                        if (tempVal > varManager.CurrentRules.MaxCellVal)
+                        {
+                            MessageBox.Show("You entered number (" + tempVal + ") bigger than expected max value: " + varManager.CurrentRules.MaxCellVal,
+                                "Incorrect input",
+                                MessageBoxButtons.OK);
+                            tempVal = -1;
+                        }
 
-                    //if digit
-                    if ((byte)cellText[0] >= 0x30 && (byte)cellText[0] <= 0x39)
-                        sudoku.SetValue(r, c, cellText[0] - 0x30);
-                    else
-                        sudoku.SetValue(r, c, -1);
+                        sudoku.SetValue(r, c, tempVal);
+                    }
                 }
 
             return sudoku;
@@ -186,40 +196,9 @@ namespace SidokuSolver_WinForm
 
         }
 
-        private void bSolve_Click(object sender, EventArgs e)
-        {
-            // avoid multiple executing
-            if(_solver.Status == Solver.eSolvingStatus.InProgress)
-            {
-                Console.WriteLine("Generacja zablokowane, bo watek jeszcze raz");
-                return;
-            }
+        #endregion
 
-            // check if already generated
-            if(_isInputChanged == false)
-            {
-                if (_solver.Status == Solver.eSolvingStatus.SolvingSuccess ||
-                _solver.Status == Solver.eSolvingStatus.SolvingFail)
-                {
-                    Console.WriteLine("[main] Already Solved.");
-                    ReprintSolution();
-                    return;
-                }
-            }
-            
-
-            _sudokuInput = CreateSudokuFromTable(varManager.CurrentRules);
-
-            _solver.LoadSudoku(_sudokuInput);
-            Console.WriteLine("[main] _solvingThread.Start()");
-
-            _solvingThread = new Thread(new ThreadStart(_solver.Solve));
-            _solvingThread.Start();
-
-            cCancel.Enabled = true;
-            bSolve.Enabled = false;
-        }
-
+        #region Helper methods
         private void ReprintSolution()
         {
             if (_isInputChanged == false)
@@ -236,8 +215,52 @@ namespace SidokuSolver_WinForm
                     MessageBox.Show("Solving error.", "Your sudoku is not able to solve.", MessageBoxButtons.OK);
                 }
             }
-            
         }
+        private void FillEachCell(Func<int, int, string> func)
+        {
+            for (int c = 0; c < varManager.CurrentRules.MaxCols; c++)
+                for (int r = 0; r < varManager.CurrentRules.MaxRows; r++)
+                    dgvSudokuMatrix.Rows[r].Cells[c].Value = func(r, c);
+        }
+
+        #endregion
+
+        #region WinForms Methods
+        private void bSolve_Click(object sender, EventArgs e)
+        {
+            // avoid multiple executing
+            if (_solver.Status == Solver.eSolvingStatus.InProgress)
+            {
+                Console.WriteLine("Generacja zablokowane, bo watek jeszcze raz");
+                return;
+            }
+
+            // check if already generated
+            if (_isInputChanged == false)
+            {
+                if (_solver.Status == Solver.eSolvingStatus.SolvingSuccess ||
+                _solver.Status == Solver.eSolvingStatus.SolvingFail)
+                {
+                    Console.WriteLine("[main] Already Solved.");
+                    ReprintSolution();
+                    return;
+                }
+            }
+
+            _sudokuInput = CreateSudokuFromTable(varManager.CurrentRules);
+
+            _solver.LoadSudoku(_sudokuInput);
+            Console.WriteLine("[main] _solvingThread.Start()");
+
+            _solvingThread = new Thread(new ThreadStart(_solver.Solve));
+            _solvingThread.Start();
+
+            bCancel.Enabled = true;
+            bSolve.Enabled = false;
+            bSolve.Text = "In progress...";
+        }
+
+
 
         private void bClearAll_Click(object sender, EventArgs e)
         {
@@ -249,19 +272,11 @@ namespace SidokuSolver_WinForm
             PrintSudokuToTable(_sudokuInput);
         }
 
-        private void FillEachCell(Func<int, int, string> func)
-        {
-            for (int c = 0; c < 9; c++)
-                for (int r = 0; r < 9; r++)
-                {
-                    dgvSudokuMatrix.Rows[r].Cells[c].Value = func(r, c);
-                }
-        }
+        
 
-        private void cCancel_Click(object sender, EventArgs e)
+        private void bCancel_Click(object sender, EventArgs e)
         {
             _solver.Abort();
-            //_solvingThread.Abort();
         }
 
         private void dgvSudokuMatrix_CellValueChanged(object sender, DataGridViewCellEventArgs e)
@@ -269,11 +284,11 @@ namespace SidokuSolver_WinForm
             _isInputChanged = true;
         }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        private void cbGameVariants_SelectedIndexChanged(object sender, EventArgs e)
         {
-            varManager.ChangeGameVariant(comboBox1.SelectedIndex);
+            varManager.ChangeGameVariant(cbGameVariants.SelectedIndex);
         }
+        #endregion
 
-        
     }
 }
