@@ -57,6 +57,7 @@
     <Compile Include="Solver.cs" />
     <Compile Include="Step.cs" />
     <Compile Include="Sudoku.cs" />
+    <Compile Include="SudokuVariantManager.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

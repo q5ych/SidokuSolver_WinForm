@@ -10,10 +10,11 @@ namespace SidokuSolver_WinForm
 {
     public partial class Form1 : Form
     {
+        SudokuVariantManager varManager;
+
         private static Solver _solver;
         private static Sudoku _sudokuInput;
         private static Sudoku _sudokuSolution;
-
         private bool _isInputChanged;
 
         private Thread _solvingThread;
@@ -21,13 +22,21 @@ namespace SidokuSolver_WinForm
         public Form1()
         {
             InitializeComponent();
-            DataGridViewSudokuMatrixSetup();
 
+            InitDataGridViewOutput();
+            varManager = new SudokuVariantManager();
+            varManager.OnRulesChanged += RulesChangedEvent;
+
+            foreach(var variant in varManager.GetAvailableGames())
+            {
+                comboBox1.Items.Add(variant.Description);
+            }
             _solver = new Solver();
-            _isInputChanged = true;
-
-            _solver.OnStatusChanged = OnStatusChanged;
             _solver.OnSolvingDone = OnSolvingDone;
+            _solver.OnStatusChanged = OnStatusChanged;
+
+            comboBox1.SelectedIndex = 0;
+            comboBox1_SelectedIndexChanged(null, null);
 
             cCancel.Enabled = false;
         }
@@ -35,32 +44,43 @@ namespace SidokuSolver_WinForm
         public void OnSolvingDone()
         {
             Console.WriteLine("[main] OnSolvingDone");
-            
-            cCancel.Enabled = false;
-            bSolve.Enabled = true;
             _isInputChanged = false;
-
             ReprintSolution();
         }
+
         public void OnStatusChanged(Solver.eSolvingStatus stat)
         {
             Console.WriteLine("[main] OnStatusChanged, new status = " + stat.ToString());
+
+            switch (stat)
+            {
+                case Solver.eSolvingStatus.SudokuNotLoad:
+                    break;
+                case Solver.eSolvingStatus.SudokuLoad:
+                    break;
+                case Solver.eSolvingStatus.InProgress:
+                    break;
+                case Solver.eSolvingStatus.SolvingSuccess:
+                case Solver.eSolvingStatus.SolvingFail:
+                case Solver.eSolvingStatus.Canceled:
+                    cCancel.BeginInvoke((Action)delegate ()
+                    {
+                        cCancel.Enabled = false;
+                    });
+                    bSolve.BeginInvoke((Action)delegate ()
+                    {
+                        bSolve.Enabled = true;
+                    });
+                    break;
+                default:
+                    break;
+            }
+
         }
 
-        private void DataGridViewSudokuMatrixSetup()
+        private void InitDataGridViewOutput()
         {
-            dgvSudokuMatrix.Rows.Clear();
-
-            dgvSudokuMatrix.ColumnCount = 9;
-
-            for (int i = 0; i < 9; i++)
-                dgvSudokuMatrix.Columns[i].Width = 30;
-
-
-            dgvSudokuMatrix.ColumnHeadersDefaultCellStyle.BackColor = Color.Navy;
-            dgvSudokuMatrix.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvSudokuMatrix.ColumnHeadersDefaultCellStyle.Font = new Font(dgvSudokuMatrix.Font, FontStyle.Bold);
-
+            dgvSudokuMatrix.Rows.Clear(); 
             dgvSudokuMatrix.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
             dgvSudokuMatrix.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dgvSudokuMatrix.AllowUserToResizeColumns = false;
@@ -69,50 +89,96 @@ namespace SidokuSolver_WinForm
             dgvSudokuMatrix.CellBorderStyle = DataGridViewCellBorderStyle.Single;
             dgvSudokuMatrix.GridColor = Color.Black;
             dgvSudokuMatrix.RowHeadersVisible = false;
-
-            dgvSudokuMatrix.RowTemplate.Height = 30;
-            for (int i = 0; i < 9; i++)
-                dgvSudokuMatrix.Rows.Add();
+            dgvSudokuMatrix.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
         }
 
-        private Sudoku CreateSudokuFromTable()
+        private void PrepareDataGridViewOutput(SudokuFieldRules fieldRules)
         {
-            int[,] tempArray = new int[9, 9];
+            int componentWidth = dgvSudokuMatrix.Width;
+            int componentHeight = dgvSudokuMatrix.Height;
+            dgvSudokuMatrix.Rows.Clear();
+
+            dgvSudokuMatrix.ColumnCount = fieldRules.MaxCols;
+
+            for (int i = 0; i < fieldRules.MaxCols; i++)
+                dgvSudokuMatrix.Columns[i].Width = componentWidth / fieldRules.MaxCols;
+
+            dgvSudokuMatrix.RowTemplate.Height = componentHeight / fieldRules.MaxRows;
+            for (int i = 0; i < fieldRules.MaxRows; i++)
+                dgvSudokuMatrix.Rows.Add();
+
+
+            int smallerDim;
+            if (componentWidth / fieldRules.MaxCols > componentHeight / fieldRules.MaxRows)
+                smallerDim = componentHeight / fieldRules.MaxRows;
+            else
+                smallerDim = componentWidth / fieldRules.MaxCols;
+
+            dgvSudokuMatrix.DefaultCellStyle.Font = new Font(FontFamily.GenericMonospace, (smallerDim*2)/5, FontStyle.Regular);
+
+            //colouring
+            for (int c = 0; c < fieldRules.MaxCols; c++)
+                for (int r = 0; r < fieldRules.MaxRows; r++)
+                {
+                    if((c / varManager.CurrentRules.ChunkSizeCols)%2 == 1){
+                        if ((r / varManager.CurrentRules.ChunkSizeRows) % 2 == 1)
+                            dgvSudokuMatrix.Rows[r].Cells[c].Style.BackColor = Color.LightSteelBlue;
+                        else
+                            dgvSudokuMatrix.Rows[r].Cells[c].Style.BackColor = Color.White;
+                    }
+                    else
+                    {
+                        if ((r / varManager.CurrentRules.ChunkSizeRows) % 2 == 1)
+                            dgvSudokuMatrix.Rows[r].Cells[c].Style.BackColor = Color.White;
+                        else
+                            dgvSudokuMatrix.Rows[r].Cells[c].Style.BackColor = Color.LightSteelBlue;
+                    }
+                }
+            //dgvSudokuMatrix.Rows.RemoveAt(dgvSudokuMatrix.Rows.Count - 1);
+        }
+
+        private void RulesChangedEvent(SudokuFieldRules rules)
+        {
+            PrepareDataGridViewOutput(rules);
+            _solver.Clear();
+        }
+
+        private Sudoku CreateSudokuFromTable(SudokuFieldRules rules)
+        {
+            SudokuSimpleChunk sudoku = new SudokuSimpleChunk(rules);
             string cellText;
 
-            for(int c = 0; c <9; c++)
-                for (int r = 0; r < 9; r++)
+            for (int c = 0; c < rules.MaxCols; c++)
+                for (int r = 0; r < rules.MaxRows; r++)
                 {
-                    cellText = (string) dgvSudokuMatrix.Rows[r].Cells[c].Value;
+                    cellText = (string)dgvSudokuMatrix.Rows[r].Cells[c].Value;
 
                     if (String.IsNullOrEmpty(cellText))
                     {
-                        tempArray[r, c] = -1;
+                        sudoku.SetValue(r, c, -1);
                         continue;
                     }
 
                     if (cellText.Length != 1)
-                        //throw netempArray[c, r] = -1;w ArgumentOutOfRangeException();
-                        tempArray[r, c] = -1;
+                        sudoku.SetValue(r, c, -1);
 
                     //if digit
                     if ((byte)cellText[0] >= 0x30 && (byte)cellText[0] <= 0x39)
-                        tempArray[r, c] = cellText[0] - 0x30;
+                        sudoku.SetValue(r, c, cellText[0] - 0x30);
                     else
-                        tempArray[r, c] = 0;
+                        sudoku.SetValue(r, c, -1);
                 }
 
-            return new Sudoku(tempArray);
+            return sudoku;
         }
-
         public void PrintSudokuToTable(Sudoku sudoku)
         {
             int element;
-            for (int c = 0; c < 9; c++)
-                for (int r = 0; r < 9; r++)
+            for (int c = 0; c < varManager.CurrentRules.MaxCols; c++)
+                for (int r = 0; r < varManager.CurrentRules.MaxRows; r++)
                 {
-                    element = sudoku._array[r, c];
-                    if(element == -1)
+                    element = sudoku.DataArray[r, c];
+                    if (element == -1)
                         dgvSudokuMatrix.Rows[r].Cells[c].Value = "";
                     else
                         dgvSudokuMatrix.Rows[r].Cells[c].Value = element.ToString();
@@ -142,7 +208,7 @@ namespace SidokuSolver_WinForm
             }
             
 
-            _sudokuInput = CreateSudokuFromTable();
+            _sudokuInput = CreateSudokuFromTable(varManager.CurrentRules);
 
             _solver.LoadSudoku(_sudokuInput);
             Console.WriteLine("[main] _solvingThread.Start()");
@@ -150,8 +216,8 @@ namespace SidokuSolver_WinForm
             _solvingThread = new Thread(new ThreadStart(_solver.Solve));
             _solvingThread.Start();
 
-            cCancel.Enabled = false;
-            bSolve.Enabled = true;
+            cCancel.Enabled = true;
+            bSolve.Enabled = false;
         }
 
         private void ReprintSolution()
@@ -202,5 +268,12 @@ namespace SidokuSolver_WinForm
         {
             _isInputChanged = true;
         }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            varManager.ChangeGameVariant(comboBox1.SelectedIndex);
+        }
+
+        
     }
 }

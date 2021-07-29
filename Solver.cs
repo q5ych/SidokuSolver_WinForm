@@ -7,7 +7,6 @@ namespace SidokuSolver_WinForm
     {
         private Sudoku _inputSudoku;
         Stack<Step> _stepsHistory;
-        //public bool isSolved { get; private set; }
         private Sudoku _outputSudoku;
         private bool _abort;
 
@@ -34,6 +33,16 @@ namespace SidokuSolver_WinForm
             ChangeState(eSolvingStatus.SudokuNotLoad);
         }
 
+        public void Clear()
+        {
+            _stepsHistory = new Stack<Step>();
+            _abort = false;
+            _inputSudoku = null;
+            _outputSudoku = null;
+
+            ChangeState(eSolvingStatus.SudokuNotLoad);
+        }
+
         public void Abort()
         {
             _abort = true;
@@ -50,8 +59,8 @@ namespace SidokuSolver_WinForm
         {
             _abort = false;
             if(sudoku == null) throw new NullReferenceException(nameof(sudoku));
-            _inputSudoku = (Sudoku)sudoku.Clone();
-            _outputSudoku = new Sudoku(_inputSudoku);
+            _inputSudoku = sudoku;
+            _outputSudoku = new SudokuSimpleChunk(_inputSudoku);
             _stepsHistory.Clear();
 
             ChangeState(eSolvingStatus.SudokuLoad);
@@ -59,22 +68,23 @@ namespace SidokuSolver_WinForm
 
         private void ApplyStep(Step step)
         {
-            _outputSudoku._array[step.X, step.Y] = step.Value;
+            _outputSudoku.SetValue(step.X, step.Y, step.Value);
         }
 
         private void RemoveStepFromCell(Step step)
         {
-            _outputSudoku._array[step.X, step.Y] = Sudoku.BLANK_CELL_VALUE;
+            //_outputSudoku._array[step.X, step.Y] = Sudoku_old.BLANK_CELL_VALUE;
+            _outputSudoku.SetValue(step.X, step.Y, _outputSudoku.Rules.BlankCellValue);
         }
 
 
         private bool StepForward()
         {
-            for (int r = 0; r < Sudoku.MAX_X; r++)
+            for (int r = 0; r < _outputSudoku.Rules.MaxRows; r++)
             {
-                for (int c = 0; c < Sudoku.MAX_Y; c++)
+                for (int c = 0; c < _outputSudoku.Rules.MaxCols; c++)
                 {
-                    if (_outputSudoku._array[r, c] == Sudoku.BLANK_CELL_VALUE)
+                    if (_outputSudoku.DataArray[r, c] == _outputSudoku.Rules.BlankCellValue)
                     {
                         Step step = new Step(r, c, 1);
                         _stepsHistory.Push(step);
@@ -98,7 +108,7 @@ namespace SidokuSolver_WinForm
 
             var currStep = _stepsHistory.Peek();
 
-            if (currStep.Value != Sudoku.MAX_CELL_VAL)
+            if (currStep.Value != _outputSudoku.Rules.MaxCellVal)
             {
                 currStep.Value += 1;
                 ApplyStep(currStep);
@@ -123,15 +133,13 @@ namespace SidokuSolver_WinForm
 
         public void Solve()
         {
-            long inc = 0;
             Step currStep;
-            bool isAbleToStepForward = false;
+            bool isAbleToStepForward;
             bool isAbleToStepBackward = true;
 
             ChangeState(eSolvingStatus.InProgress);
 
             isAbleToStepForward = StepForward();
-            //Console.ReadLine();
 
             while (isAbleToStepForward && isAbleToStepBackward)
             {
@@ -142,32 +150,13 @@ namespace SidokuSolver_WinForm
                     return;
                 }
 
-                inc++;
                 currStep = _stepsHistory.Peek();
 
-                if (currStep.X == 0 && currStep.Y == 4)
-                {
-                    inc++;
-                    inc--;
-                }
-
-                if (_outputSudoku.IsValid(currStep.X, currStep.Y))
-                {
+                if (_outputSudoku.PerformCellValidation(currStep.X, currStep.Y))
                     isAbleToStepForward = StepForward();
-                }
                 else
-                {
                     isAbleToStepBackward = StepBackward();
-                }
 
-                Console.WriteLine("- inc: + " + inc);
-                //if (inc == 50)
-                //{
-                //    Console.WriteLine("Canceling");
-                //    OnSolvingDone();
-                //    break;
-                //}
-                    
             }
 
             //loop eskaped because no more backwardsteps => unsolvable
@@ -184,8 +173,6 @@ namespace SidokuSolver_WinForm
             //Console.WriteLine();
             //Console.WriteLine(_outputSudoku.ToString());
             //Console.WriteLine("____________________________________________________________________________________________");
-
-
 
             return;
         }
